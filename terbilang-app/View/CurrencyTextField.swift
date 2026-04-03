@@ -20,22 +20,21 @@ struct CurrencyTextField: UIViewRepresentable {
         tv.isScrollEnabled = false
         tv.backgroundColor = .clear
         tv.textContainer.lineFragmentPadding = 0
-        tv.textContainerInset = .zero
+        tv.textContainerInset = UIEdgeInsets(top: 16, left: 16, bottom: 16, right: 16)
         tv.text = placeholder
         tv.textColor = .placeholderText
-        tv.setContentHuggingPriority(.defaultHigh, for: .vertical)
-        tv.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
+        context.coordinator.textView = tv
         return tv
     }
 
     func updateUIView(_ uiView: UITextView, context: Context) {
-        // Update teks terformat dari ViewModel, pertahankan kursor
-        if uiView.text != text {
-            let offset = context.coordinator.cursorOffset(in: uiView)
-            uiView.text = text
-            uiView.textColor = .label
-            context.coordinator.setCursor(in: uiView, offset: offset)
-        }
+        guard uiView.text != text else { return }
+        guard uiView.textColor != .placeholderText else { return }
+
+        // Simpan offset kursor sebelum update
+        let offset = context.coordinator.savedCursorOffset
+        uiView.text = text
+        context.coordinator.setCursor(in: uiView, offset: offset)
     }
 
     func makeCoordinator() -> Coordinator {
@@ -45,6 +44,8 @@ struct CurrencyTextField: UIViewRepresentable {
     class Coordinator: NSObject, UITextViewDelegate {
         var placeholder: String
         var onChanged: (String) -> Void
+        var savedCursorOffset: Int = 0
+        weak var textView: UITextView?
 
         init(placeholder: String, onChanged: @escaping (String) -> Void) {
             self.placeholder = placeholder
@@ -66,14 +67,9 @@ struct CurrencyTextField: UIViewRepresentable {
         }
 
         func textViewDidChange(_ textView: UITextView) {
-            let offset = cursorOffset(in: textView)
+            savedCursorOffset = cursorOffset(in: textView)
             onChanged(textView.text ?? "")
-            // Kursor diset di updateUIView setelah teks diformat
-            // Simpan offset untuk dipakai updateUIView
-            pendingCursorOffset = offset
         }
-
-        var pendingCursorOffset: Int = 0
 
         func cursorOffset(in tv: UITextView) -> Int {
             guard let selectedRange = tv.selectedTextRange else { return tv.text.count }

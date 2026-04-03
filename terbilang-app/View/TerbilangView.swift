@@ -15,16 +15,14 @@ struct TerbilangView: View {
         NavigationStack {
             VStack(spacing: 0) {
                 VStack {
-                    TextEditor(text: $vm.displayInput)
-                        .keyboardType(.decimalPad)
-                        .padding()
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                        .background(Color.gray.opacity(0.1))
-                        .font(.title2)
-                        .scrollContentBackground(.hidden)
-                        .onChange(of: vm.displayInput) {
-                            vm.handleInputChange(vm.displayInput)
-                        }
+                    CurrencyTextField(
+                        text: $vm.displayInput,
+                        placeholder: "Masukkan angka"
+                    ) { newValue in
+                        vm.handleInputChange(newValue)
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .background(Color.gray.opacity(0.1))
                 }
                 
                 Divider()
@@ -65,6 +63,7 @@ struct TerbilangView: View {
             }
             .navigationTitle("Terbilang")
             .ignoresSafeArea(.keyboard, edges: .bottom)
+            .contentShape(Rectangle())
             .onTapGesture {
                 UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
             }
