@@ -7,47 +7,54 @@
 
 import Foundation
 
-struct TerbilangHelper {
-    static let maxLimit = 999_999_999_999_999
+/// Converts numbers to Indonesian words ("terbilang"), in lowercase.
+/// Casing, "rupiah" and "# … #" are applied later by `TerbilangStyle`.
+enum TerbilangHelper {
+    /// Up to 999.999.999.999.999 (999 triliun).
+    static let maxIntegerDigits = 15
+    static let maxDecimalDigits = 4
 
     private static let angka = ["", "satu", "dua", "tiga", "empat", "lima",
-                                 "enam", "tujuh", "delapan", "sembilan",
-                                 "sepuluh", "sebelas"]
+                                "enam", "tujuh", "delapan", "sembilan",
+                                "sepuluh", "sebelas"]
 
-    static func convert(_ n: Int) -> String {
-        if n == 0 { return "Nol" }
-        guard n <= maxLimit else { return "Over Limit" }
-        return terbilang(n).capitalized.trimmingCharacters(in: .whitespaces)
+    /// Digit names used after "koma", where 0 is read as "nol".
+    private static let digitNames = ["nol", "satu", "dua", "tiga", "empat",
+                                     "lima", "enam", "tujuh", "delapan", "sembilan"]
+
+    static func words(for n: Int) -> String {
+        n == 0 ? "nol" : terbilang(n)
+    }
+
+    /// `raw` uses a comma for decimals and no thousand separators, e.g. "1250000,75".
+    static func words(forRaw raw: String) -> String {
+        let parts = raw.split(separator: ",", maxSplits: 1, omittingEmptySubsequences: false).map(String.init)
+        guard let integer = Int(parts[0].isEmpty ? "0" : parts[0]) else { return "" }
+
+        var result = words(for: integer)
+        if parts.count > 1, !parts[1].isEmpty {
+            let decimals = parts[1].compactMap { $0.wholeNumberValue.map { digitNames[$0] } }
+            result += " koma " + decimals.joined(separator: " ")
+        }
+        return result
     }
 
     private static func terbilang(_ n: Int) -> String {
         guard n > 0 else { return "" }
-        if n < 12       { return angka[n] }
-        if n < 20       { return terbilang(n - 10) + " belas" }
-        if n < 100      { return (terbilang(n / 10) + " puluh " + terbilang(n % 10)).trimmingCharacters(in: .whitespaces) }
-        if n < 200      { return ("seratus " + terbilang(n - 100)).trimmingCharacters(in: .whitespaces) }
-        if n < 1_000    { return (terbilang(n / 100) + " ratus " + terbilang(n % 100)).trimmingCharacters(in: .whitespaces) }
-        if n < 2_000    { return ("seribu " + terbilang(n - 1000)).trimmingCharacters(in: .whitespaces) }
-        if n < 1_000_000          { return (terbilang(n / 1_000) + " ribu " + terbilang(n % 1_000)).trimmingCharacters(in: .whitespaces) }
-        if n < 1_000_000_000      { return (terbilang(n / 1_000_000) + " juta " + terbilang(n % 1_000_000)).trimmingCharacters(in: .whitespaces) }
-        if n < 1_000_000_000_000  { return (terbilang(n / 1_000_000_000) + " milyar " + terbilang(n % 1_000_000_000)).trimmingCharacters(in: .whitespaces) }
-        return (terbilang(n / 1_000_000_000_000) + " triliun " + terbilang(n % 1_000_000_000_000)).trimmingCharacters(in: .whitespaces)
-    }
-
-    static func convertWithDecimal(_ value: String) -> String {
-        let parts = value.split(separator: ",", maxSplits: 1).map(String.init)
-        guard !parts[0].isEmpty, let integerPart = Int(parts[0]) else { return "" }
-        guard integerPart <= maxLimit else { return "Over Limit" }
-
-        var result = convert(integerPart)
-
-        if parts.count > 1 && !parts[1].isEmpty {
-            let decimalText = parts[1].compactMap {
-                Int(String($0)).map { angka[$0].capitalized }
-            }.joined(separator: " ")
-            result += " Koma " + decimalText  // ← "Koma" kapital
+        func join(_ parts: String...) -> String {
+            parts.filter { !$0.isEmpty }.joined(separator: " ")
         }
-
-        return result
+        switch n {
+        case ..<12:                return angka[n]
+        case ..<20:                return join(terbilang(n - 10), "belas")
+        case ..<100:               return join(terbilang(n / 10), "puluh", terbilang(n % 10))
+        case ..<200:               return join("seratus", terbilang(n - 100))
+        case ..<1_000:             return join(terbilang(n / 100), "ratus", terbilang(n % 100))
+        case ..<2_000:             return join("seribu", terbilang(n - 1_000))
+        case ..<1_000_000:         return join(terbilang(n / 1_000), "ribu", terbilang(n % 1_000))
+        case ..<1_000_000_000:     return join(terbilang(n / 1_000_000), "juta", terbilang(n % 1_000_000))
+        case ..<1_000_000_000_000: return join(terbilang(n / 1_000_000_000), "miliar", terbilang(n % 1_000_000_000))
+        default:                   return join(terbilang(n / 1_000_000_000_000), "triliun", terbilang(n % 1_000_000_000_000))
+        }
     }
 }

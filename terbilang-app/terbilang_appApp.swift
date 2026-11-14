@@ -9,9 +9,13 @@ import SwiftUI
 
 @main
 struct terbilang_appApp: App {
+    @State private var history = HistoryStore()
+
     var body: some Scene {
         WindowGroup {
-            LandingView()
+            HomeView()
+                .environment(history)
+                .tint(Theme.accent)
         }
     }
 }
